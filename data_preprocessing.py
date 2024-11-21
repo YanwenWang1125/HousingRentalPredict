@@ -11,8 +11,9 @@ from datetime import datetime
 def remove_useless_data(data):
     # Remove the address number using regular expression
     data["address"] = list(map(lambda x: re.sub(r'^\d+\s+', '', str(x)), data.address))
-    # remove link column
+    # remove link column and id
     data = data.drop(columns=["link"])
+    data = data.drop(columns=["rentfaster_id"])
     return data
 
 # Convert values: replace "none" and NaN with 0, convert others to float        
@@ -242,7 +243,7 @@ def imputing_missing_data(data, categorical_list):
 def process_data(data):
 
     # ================= Data Cleaning =================
-    # remove the address number and link column
+    # remove the address number, id, and link column
     data = remove_useless_data(data)
     
     # Clean bath room column
@@ -294,6 +295,6 @@ def process_data(data):
 
 
 # TEST
-original_data = pd.read_csv('rentfaster.csv')
-result = process_data(original_data)
-print(result)
+# original_data = pd.read_csv('rentfaster.csv')
+# result = process_data(original_data)
+# print(result)
