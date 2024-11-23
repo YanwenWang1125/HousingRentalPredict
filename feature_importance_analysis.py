@@ -36,8 +36,19 @@ print("[Recursive Feature Elimination] Running...")
 rfe_selector = RFECV(rf, step=1, cv=kf, scoring='neg_mean_squared_error')
 rfe_selector.fit(X, y)
 selected_features = X.columns[rfe_selector.support_]
+# Extract the feature importances of the selected features
+rfe_feature_importances = rfe_selector.estimator_.feature_importances_
 
-print(f"[Recursive Feature Elimination] Selected Features by RFE: {selected_features}")
+# Create a DataFrame to rank the features
+rfe_importance_df = pd.DataFrame({
+    'Feature': selected_features,
+    'Importance': rfe_feature_importances
+})
+
+# Sort features by importance in descending order
+rfe_importance_df = rfe_importance_df.sort_values(by='Importance', ascending=False)
+
+#print(f"[Recursive Feature Elimination] Selected Features by RFE: {selected_features}")
 
 n_folds = 5 
 n_rows = 2  
@@ -85,6 +96,19 @@ plt.title("Average Feature Importance Across Folds")
 plt.xticks(rotation=45)
 plt.tight_layout()
 plt.show()
+
+# Filter for selected features (from RFECV)
+selected_features_importances = feature_importances[rfe_selector.support_]
+
+# Create a DataFrame for ranking
+selected_features_df = pd.DataFrame({
+    'Feature': selected_features,
+    'Importance': selected_features_importances
+})
+
+# Sort features by importance in descending order
+selected_features_df = selected_features_df.sort_values(by='Importance', ascending=False)
+
 
 # ================== SHAP analysis ==================
 print("[SHAP] Running...")
@@ -142,4 +166,14 @@ plt.title("Correlation Heatmap")
 sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
 plt.tight_layout()
 plt.show()
+
+# ================== Numerical Result ====================
+print("Important Features after RFE:")
+for idx, (_, row) in enumerate(rfe_importance_df.iterrows(), start=1):
+    print(f"Rank {idx}: Feature: {row['Feature']}, Importance: {row['Importance']}")
+
+print("\nImportant Features after cross validation:")
+for idx, (_, row) in enumerate(selected_features_df.iterrows(), start=1):
+    print(f"Rank {idx}: Feature: {row['Feature']}, Importance: {row['Importance']}")
+
 
