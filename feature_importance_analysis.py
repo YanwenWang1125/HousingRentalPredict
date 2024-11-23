@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import shap
 import seaborn as sns
 from tqdm import tqdm
+import math
 
 original_data = pd.read_csv('rentfaster.csv')
 #data = data_preprocessing.process_data(original_data)
@@ -30,7 +31,7 @@ cv_results = []
 
 feature_importances = np.zeros(X.shape[1])
 
-# Recursive Feature Elimination
+# ================== Recursive Feature Elimination ==================
 print("[Recursive Feature Elimination] Running...")
 rfe_selector = RFECV(rf, step=1, cv=kf, scoring='neg_mean_squared_error')
 rfe_selector.fit(X, y)
@@ -38,8 +39,10 @@ selected_features = X.columns[rfe_selector.support_]
 
 print(f"[Recursive Feature Elimination] Selected Features by RFE: {selected_features}")
 
-# Create a figure with subplots for each fold
-fig, axes = plt.subplots(nrows=1, ncols=5, figsize=(20, 5), sharey=True)  # 5 folds, 1 row
+n_folds = 5 
+n_rows = 2  
+n_cols = math.ceil(n_folds / n_rows)  # Calculate the number of columns needed
+fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(20, 10), sharey=True)
 axes = axes.flatten()  # Flatten axes array for easy indexing
 fig.suptitle("Feature Importance Across 5 Folds", fontsize=16)
 
@@ -66,28 +69,63 @@ for fold, (train_idx, test_idx) in enumerate((tqdm(kf.split(X), total=kf.get_n_s
     ax.set_xticklabels(X.columns, rotation=45)
     ax.set_ylabel("Importance")
 
-# Adjust layout
+# Hide unused subplots if any
+for i in range(n_folds, len(axes)):
+    axes[i].set_visible(False)
+
 plt.tight_layout(rect=[0, 0, 1, 0.95])  # Leave space for the main title
 plt.show()
 
 
-# # Average feature importance
-# print("[Average Feature Importance] Running...")
-# feature_importances /= kf.get_n_splits()
-# plt.bar(X.columns, feature_importances)
-# plt.title("Average Feature Importance Across Folds")
-# plt.xticks(rotation=45)
-# plt.tight_layout()
-# plt.show()
+# Average feature importance
+print("[Average Feature Importance] Running...")
+feature_importances /= kf.get_n_splits()
+plt.bar(X.columns, feature_importances)
+plt.title("Average Feature Importance Across Folds")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
 
-# # SHAP analysis
-# print("[SHAP] Running...")
-# explainer = shap.TreeExplainer(rf)
-# shap_values = explainer.shap_values(X)
+# ================== SHAP analysis ==================
+print("[SHAP] Running...")
+explainer = shap.TreeExplainer(rf)
+shap_values = explainer.shap_values(X)
 
-# shap.summary_plot(shap_values, X)
+shap.summary_plot(shap_values, X)
 
-# # Partial Dependence Plots
+# ================== Partial Dependence Plots ==================
+print("[Partial Dependence] Running...")
+n_features = len(selected_features)
+fig, axes = plt.subplots(
+    nrows=2, 
+    ncols=math.ceil(n_features / 2), 
+    figsize=(5 * min(n_features, 2), 5 * math.ceil(n_features / 2)), 
+    constrained_layout=True
+)
+
+# Flatten axes array for consistent indexing
+if n_features == 1:
+    axes = [axes]
+else:
+    axes = axes.ravel()
+
+for i, feature in enumerate(selected_features):
+    display = PartialDependenceDisplay.from_estimator(rf, X, [feature], ax=axes[i])
+    axes[i].set_title(f"Partial Dependence Plot for {feature}")
+
+
+for j in range(i + 1, len(axes)):
+    axes[j].set_visible(False)
+
+plt.tight_layout()
+plt.subplots_adjust(
+    top=0.967,  
+    left = 0.06,
+    bottom = 0.055,
+    hspace=0.186, 
+    wspace=0.288 
+)
+plt.show()
 # print("[Partial Dependence] Running...")
 # for feature in selected_features:
 #     display = PartialDependenceDisplay.from_estimator(rf, X, [feature])
@@ -95,12 +133,13 @@ plt.show()
 #     plt.tight_layout()
 #     plt.show()
 
-# # Correlation Analysis
-# print("[Correlation] Running...")
-# correlation_matrix = data.corr()
-# plt.figure(figsize=(12, 10))
-# plt.title("Correlation Heatmap")
-# sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
-# plt.tight_layout()
-# plt.show()
+
+# ================== Correlation Analysis ==================
+print("[Correlation] Running...")
+correlation_matrix = data.corr()
+plt.figure(figsize=(12, 10))
+plt.title("Correlation Heatmap")
+sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
+plt.tight_layout()
+plt.show()
 
